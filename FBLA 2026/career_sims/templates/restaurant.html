@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Restaurant Simulator</title>
+    <style>
+        body { font-family: "Poppins", sans-serif; background: linear-gradient(135deg, #000000, #00c407); text-align: center; padding: 40px; }
+        .stats { display: flex; justify-content: center; gap: 20px; }
+        .stat { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 10px rgba(255, 255, 255, 0.1); width: 200px; }
+        .progress-container { background: #ddd; height: 10px; border-radius: 5px; margin-top: 10px; }
+        .progress { height: 100%; border-radius: 5px; }
+        .money-bar { background: #ffd700; }
+        .happ-bar { background: #76e0a2; }
+        .sat-bar { background: #76a8e0; }
+        .event-box { background: white; border-radius: 20px; padding: 30px; margin: 40px auto; width: 50%; }
+        button { background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; margin: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Day {{ day }}</h1>
+    <div class="stats">
+        <div class="stat">Money: ${{ money }}<div class="progress-container"><div class="progress money-bar" style="width:{{ money }}%"></div></div></div>
+        <div class="stat">Happiness: {{ employee_happiness }}%<div class="progress-container"><div class="progress happ-bar" style="width:{{ employee_happiness }}%"></div></div></div>
+        <div class="stat">Satisfaction: {{ customer_satisfaction }}%<div class="progress-container"><div class="progress sat-bar" style="width:{{ customer_satisfaction }}%"></div></div></div>
+    </div>
+    <div class="event-box">
+        <h2>{{ event.event }}</h2>
+        <form action="{{ url_for('restaurant.action', choice='choice1') }}" method="post"><button type="submit">{{ event.choice1.text }}</button></form>
+        {% if event.choice2 %}<form action="{{ url_for('restaurant.action', choice='choice2') }}" method="post"><button type="submit">{{ event.choice2.text }}</button></form>{% endif %}
+    </div>
+    <div>
+                <button onclick="window.location.href='/'"
+                style="background:rgb(255, 0, 0); color:white; text-align:center;">
+                ⬅ BACK TO MAIN MENU
+            </button>
+
+    </div>
+</body>
+</html>

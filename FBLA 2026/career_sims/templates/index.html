@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Career Simulator 2026</title>
+    <style>
+        body { font-family: 'Courier New', monospace; background: #1a1a1a; color: white; text-align: center; padding: 50px; }
+        .menu-container { display: flex; justify-content: center; gap: 40px; margin-top: 50px; }
+        .card { border: 4px solid #fff; padding: 20px; width: 250px; text-decoration: none; color: white; transition: 0.2s; }
+        .card:hover { background: #333; transform: scale(1.1); }
+        .restaurant-card { border-color: #ff719a; }
+        .trucking-card { border-color: #ffd700; }
+        .modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #222;
+    border: 2px solid #0f0;
+    width: 60%;
+    margin: 10% auto;
+    padding: 25px;
+    color: white;
+    text-align: left;
+}
+
+    </style>
+</head>
+<body>
+    <h1>CHOOSE YOUR CAREER</h1>
+    <div class="menu-container">
+        <a href="{{ url_for('restaurant.home') }}" class="card restaurant-card">
+            <h2>Restaurant</h2>
+            <p>Manage a restaurant</p>
+        </a>
+        <a href="{{ url_for('trucking.interface') }}" class="card trucking-card">
+            <h2>Trucking</h2>
+            <p>Deliver cargo across the USA</p>
+        </a>
+        <div class="card" onclick="openInstructions()" style="cursor:pointer;">
+            <h2>How To Play</h2>
+            <p>Learn the rules of each career</p>
+
+        </div>
+        
+
+
+
+    </div>
+    <div id="instructionsModal" class="modal">
+    <div class="modal-content">
+        <h2>HOW TO PLAY</h2>
+
+        <div id="instructions-text">
+            1. Restaurant Manager:<br>
+            - You are in charge of running a restaraunt!<br>
+            - You will have to make decisions. Each decision impacts your money, employee happiness, or customer satisfaction<br>
+            - It's your job to balance those three qualities!<br>
+            2. Truck Delivery Manager:<br>
+            - You are in charge of picking up truck routes and maintaining efficiency!<br>
+            - The higher the wage of the truckers, the less likely you are to run into issues on the road<br>
+            - Don't go bankrupt!
+        </div>
+
+        <button onclick="closeInstructions()"
+                style="margin-top:15px; background:#0f0; color:#000;">
+            CLOSE
+        </button>
+    </div>
+</div>
+<script>
+function openInstructions() {
+    document.getElementById('instructionsModal').style.display = 'block';
+}
+
+function closeInstructions() {
+    document.getElementById('instructionsModal').style.display = 'none';
+}
+
+</script>
+
+    
+</body>
+</html>

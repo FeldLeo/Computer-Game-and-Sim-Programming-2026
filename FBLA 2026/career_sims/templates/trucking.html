@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Truck Delivery Manager</title>
+    <style>
+
+        body { font-family: 'Courier New', monospace; background: linear-gradient(135deg, #000000, #00c407); color: #0f0; padding: 20px; }
+        .game-container {
+            display: flex;
+            gap: 20px;
+        }
+        #map-canvas { 
+            width: 800px;
+            height: 500px;
+            background-image: url("{{ url_for('static', filename='images/usmap.png') }}");
+            background-size: cover;
+            border: 2px solid #0f0;
+            position: relative;
+            overflow: hidden;
+        }
+        .city-node {
+            position: absolute;
+            width: 10px;
+            height: 10px; background: #0f0;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .city-label {
+            position: absolute;
+            font-size: 10px;
+            color: #fff;
+            transform: translate(8px, -8px);
+            pointer-events: none;
+        }
+        .truck-icon {
+            position: absolute;
+            z-index: 10;
+            transition: left 1.5s ease-in-out, top 1.5s ease-in-out;
+            transform: translate(-50%, -50%);
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+        .truck-icon.flipped {
+            transform: translate(-50%, -50%) scaleX(-1);
+        }
+        .size-small {
+            width: 30px;
+            height: 25px;
+        }
+        .size-big {
+            width: 50px;
+            height: 40px;
+        }
+        .sidebar {
+            width: 350px;
+            background: #333;
+            padding: 15px;
+            border: 1px solid #0f0;
+            height: 80vh; overflow-y: auto;
+        }
+        .job-card {
+            background: #444;
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 4px solid #ffd700;
+        }
+        .job-moving {
+            border-left: 4px solid #f00;
+            opacity: 0.7;
+        }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            text-align: left;
+            margin-bottom: 5px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+        }
+        .modal-content {
+            background: #222;
+            margin: 10% auto;
+            padding: 20px;
+            border: 2px solid #0f0;
+            width: 50%;
+            color: #fff;
+        }
+        .stat-block {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #555;
+            padding: 5px 0;
+        }
+        
+        
+        #endingModal {
+            background: #000;
+            color: #fff; text-align: center;
+        }
+        #endingModal h1 {
+            font-size: 3em;
+            color: #ffd700;
+        }
+        #endingModal p {
+            font-size: 1.5em;
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>TRUCK DELIVERY MANAGER SIMULATION</h1>
+    <div class="game-container">
+        <div id="map-canvas"></div>
+        <div class="sidebar">
+            <div class="stat-block"><span>DAY:</span> <span id="day-display">{{ player.day }} / 31</span></div>
+            <div class="stat-block"><span>CREDITS:</span> <span style="color: #ffd700;">$<span id="money-display">{{ player.money|round(2) }}</span> / $15,000</span></div>
+            <br>
+            <label>DRIVER WAGE: $<span id="wage-val">{{ player.driver_wage }}</span>/day</label>
+            <input type="range" min="20" max="150" value="{{ player.driver_wage }}" onchange="updateWage(this.value)">
+            <button onclick="advanceDay()" style="background: #0af; color: white; text-align: center;">NEXT DAY >></button>
+            <div id="fleet-list">
+                {% for truck in player.fleet %}
+                <div class="job-card {% if truck.status == 'moving' %}job-moving{% endif %}">
+                    <strong>TRUCK #{{ truck.truckId }} ({{ truck.type|upper }})</strong><br>
+                    LOC: {{ truck.location }} | STATUS: {{ truck.status|upper }}
+                    {% if truck.status == 'idle' %}
+                        <hr>
+                        {% for route in routes[truck.location] %}
+                        <button onclick="dispatchTruck({{ truck.truckId }}, '{{ route.to }}')">
+                            TO: {{ route.to }}<br>
+                            <span style="font-size: 10px;">Pay: ${{ route.payout }} | Due Day: {{ player.day + route.due }}</span>
+                        </button>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="market">
+                <button onclick="buyTruck('small')">BUY SMALL TRUCK ($1000)</button>
+                <button onclick="buyTruck('big')" style="background: #ffd700;">BUY BIG TRUCK ($3000)</button>
+            </div>
+            <div>
+                <button onclick="window.location.href='/'"
+                style="background:rgb(255, 0, 0); color:white; text-align:center;">
+                ⬅ BACK TO MAIN MENU
+            </button>
+
+            </div>
+        </div>
+    </div>
+
+    <div id="payoutModal" class="modal">
+        <div class="modal-content">
+            <h2>DAILY REPORT</h2>
+            <div id="payout-log"></div>
+            <div class="stat-block"><span>REVENUE:</span> <span id="report-rev" style="color:#0f0;"></span></div>
+            <div class="stat-block"><span>FUEL COST:</span> <span id="report-fuel" style="color:#f55;"></span></div>
+            <div class="stat-block"><span>WAGES:</span> <span id="report-wages" style="color:#f55;"></span></div>
+            <div class="stat-block"><span>NET PROFIT:</span> <span id="report-net"></span></div>
+            <button onclick="location.reload()" style="text-align: center; margin-top: 10px;">CONTINUE</button>
+        </div>
+    </div>
+
+    <div id="endingModal" class="modal">
+        <div class="modal-content">
+            <h1 id="ending-title">GAME OVER</h1>
+            <p id="ending-body"></p>
+            <button onclick="location.href='/trucking'" style="text-align: center; background: #ffd700;">NEW GAME</button>
+        </div>
+        <div></div><button onclick="handleReset()" style="background: #f00; color: #fff; margin-top: 20px;">
+    RESET & RESTART GAME</button></div>
+</button>
+    </div>
+
+    <script>
+        const cityCoords = {
+    "Seattle": [95, 55],
+    "Portland": [90, 95],
+    "San Francisco": [85, 230],
+    "Los Angeles": [135, 310],
+    "Phoenix": [245, 330],
+    "Denver": [300, 210],
+    "Dallas": [440, 370],
+    "Houston": [470, 415],
+    "Chicago": [515, 155],
+    "Saint Louis": [515, 235],
+    "Indianapolis": [595, 205],
+    "Louisville": [605, 245],
+    "Cincinnati": [625, 225],
+    "Nashville": [595, 295],
+    "Pittsburgh": [675, 195],
+    "Detroit": [615, 145],
+    "New Orleans": [550, 415],
+    "Miami": [715, 475],
+    "Atlanta": [635, 335],
+    "Charlotte": [685, 305],
+    "Washington, D.C.": [710, 230],
+    "Philadelphia": [730, 200],
+    "New York City": [745, 175]
+};
+        const canvas = document.getElementById('map-canvas');
+        const fleetData = {{ player.fleet|tojson }};
+
+        function initMap() {
+            for (let city in cityCoords) {
+                let [x, y] = cityCoords[city];
+                let dot = document.createElement('div'); dot.className = 'city-node'; dot.style.left = x+'px'; dot.style.top = y+'px'; canvas.appendChild(dot);
+                let label = document.createElement('div'); label.className = 'city-label'; label.style.left = x+'px'; label.style.top = y+'px'; label.innerText = city; canvas.appendChild(label);
+            }
+            fleetData.forEach(truck => {
+                const icon = document.createElement('div');
+                icon.className = `truck-icon size-${truck.type}`;
+                icon.style.left = cityCoords[truck.location][0] + 'px';
+                icon.style.top = cityCoords[truck.location][1] + 'px';
+                icon.style.backgroundImage = `url('/static/images/${truck.type}truck.png')`;
+                if (truck.status === 'moving') icon.style.opacity = '0.5';
+                canvas.appendChild(icon);
+            });
+        }
+
+function advanceDay() {
+    fetch('/trucking/next_day', { method: 'POST' })
+    .then(res => res.json())
+    .then(data => {
+        // Update UI
+        document.getElementById('money-display').innerText = data.money.toFixed(2);
+        document.getElementById('day-display').innerText = data.day;
+        
+        // Check for Bankruptcy (Game Over)
+        if (data.money < 0) {
+            alert("BANKRUPTCY! Your logistics empire has collapsed.");
+            handleReset();
+            return;
+        }
+
+        const log = document.getElementById('payout-log');
+        log.innerHTML = data.report.join('<br>');
+        document.getElementById('report-rev').innerText = '$' + data.revenue.toFixed(2);
+        document.getElementById('report-wages').innerText = '$' + data.wage_cost.toFixed(2);
+        document.getElementById('report-fuel').innerText = '$' + data.fuel_cost.toFixed(2);
+;
+        document.getElementById('report-net').innerText = '$' + data.net.toFixed(2);
+        
+        document.getElementById('payoutModal').style.display = 'block';
+        document.querySelector('#payoutModal .close').onclick = () => { location.reload(); };
+    });
+}
+
+// Helper function to call the reset route
+function handleReset() {
+    fetch('/trucking/reset', { method: 'POST' })
+    .then(() => {
+        window.location.href = "/"; // Redirect to the main menu/start page
+    });
+}
+
+        function dispatchTruck(id, to) {
+            fetch('/trucking/move', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({truckId: id, to: to}) })
+            .then(() => location.reload());
+        }
+
+        function buyTruck(type) { fetch('/trucking/purchase/'+type, {method:'POST'}).then(() => location.reload()); }
+        function updateWage(v) { fetch('/trucking/set_wage', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({wage:v})}); }
+
+        initMap();
+    </script>
+</body>
+</html>

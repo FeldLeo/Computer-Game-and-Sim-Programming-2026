@@ -1,6 +1,9 @@
 COMPUTER GAME AND SIMULATION PROGRAMMING - FBLA 2026
 Regional Competition
+
+
 Group members: Clayton Didyk, Leo Feld, Caiden Silver
+
 Trinity High School
 
 
@@ -17,4 +20,5 @@ HOW TO RUN:
    python app.py
 4. Open browser and go to:
    http://127.0.0.1:5000
+
 
